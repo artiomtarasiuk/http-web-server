@@ -49,7 +49,6 @@ class RequestHandler:
         try:
             request = self._read_request()
             response_code, method, path = self._parse_request(request)
-            logging.info(f"Path: {path}")
             self._send_response(response_code, method, path)
         except socket.error as e:
             logging.info(f"Unable to handle request: {e}")
@@ -83,15 +82,14 @@ class RequestHandler:
         if router.endswith("/"):
             router = os.path.join(router, self._index_file)
         path = self._document_root + os.path.realpath(router)
-        logging.info(f"Path: {path}")
         if not os.path.isfile(path):
             return NOT_FOUND, method.upper(), path
 
         content_type, _ = mimetypes.guess_type(path)
-        self._set_headers(("Content-Type", content_type))
+        if content_type:
+            self._set_headers(("Content-Type", content_type))
         try:
             size = os.path.getsize(path)
-            logging.info(size)
             self._set_headers(("Content-Length", str(size)))
         except os.error:
             return NOT_ALLOWED, None, None
@@ -109,21 +107,23 @@ class RequestHandler:
         headers_line = self._base_delimiter.join(
             f"{k}: {v}" for k, v in self._headers.items()
         )
-        body = ""
-        if response_code == OK:
-            body = self._get_response_body(path) if method == "GET" else ""
-        resp = f"{primary_line}{self._base_delimiter}{headers_line}{self._head_delimiter}{body}"
+        resp = (
+            f"{primary_line}{self._base_delimiter}{headers_line}{self._head_delimiter}"
+        ).encode(self._encoding)
+        body = None
+        if method == "GET" and response_code == OK:
+            body = self._get_response_body(path)
         try:
-            self._socket.sendall(resp.encode(self._encoding))
+            self._socket.sendall(resp + body if body else resp)
         except socket.error as e:
             logging.info(f"Unable to send response from socket: {e}")
 
-    def _get_response_body(self, path: str = None) -> str:
-        body = ""
+    def _get_response_body(self, path: str = None) -> bytes:
+        body = b""
         if not path:
             return body
         size = int(self._headers["Content-Length"])
-        with open(path, "r") as f:
+        with open(path, "rb") as f:
             body = f.read(size)
         return body
 
