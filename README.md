@@ -28,7 +28,8 @@ With 10 workers
 ab -n 50000 -c 100 -r localhost:8080/httptest/wikipedia_russia.html
 ```
 
-```This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+```
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
 
@@ -54,31 +55,31 @@ Document Path:          /httptest/wikipedia_russia.html
 Document Length:        954824 bytes
 
 Concurrency Level:      100
-Time taken for tests:   154.282 seconds
+Time taken for tests:   33.961 seconds
 Complete requests:      50000
 Failed requests:        0
 Total transferred:      47748500000 bytes
 HTML transferred:       47741200000 bytes
-Requests per second:    324.08 [#/sec] (mean)
-Time per request:       308.565 [ms] (mean)
-Time per request:       3.086 [ms] (mean, across all concurrent requests)
-Transfer rate:          302234.24 [Kbytes/sec] received
+Requests per second:    1472.30 [#/sec] (mean)
+Time per request:       67.921 [ms] (mean)
+Time per request:       0.679 [ms] (mean, across all concurrent requests)
+Transfer rate:          1373045.63 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0  128 544.2      0   31518
-Processing:    15  178  81.6    178    3469
-Waiting:       12  169  79.5    168    3463
-Total:         15  307 558.1    186   31642
+Connect:        0   33 310.4      0    7307
+Processing:     1   24  70.3     21    5764
+Waiting:        0    4  69.9      1    5762
+Total:          1   57 326.5     22    7725
 
 Percentage of the requests served within a certain time (ms)
-  50%    186
-  66%    224
-  75%    248
-  80%    266
-  90%    354
-  95%   1229
-  98%   1341
-  99%   3195
- 100%  31642 (longest request)
+  50%     22
+  66%     27
+  75%     30
+  80%     31
+  90%     35
+  95%     44
+  98%   1024
+  99%   1063
+ 100%   7725 (longest request)
 ```

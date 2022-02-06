@@ -4,21 +4,22 @@ import mimetypes
 import multiprocessing
 import os
 import socket
-import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from http import HTTPStatus
 from typing import Optional, Tuple
 from urllib.parse import unquote, urlparse
 
-OK = 200
-FORBIDDEN = 403
-NOT_FOUND = 404
-NOT_ALLOWED = 405
+OK = HTTPStatus.OK.numerator
+FORBIDDEN = HTTPStatus.FORBIDDEN.numerator
+NOT_FOUND = HTTPStatus.NOT_FOUND.numerator
+NOT_ALLOWED = HTTPStatus.METHOD_NOT_ALLOWED.numerator
 
 CODES_MAPPING = {
-    OK: "OK",
-    NOT_FOUND: "Not Found",
-    FORBIDDEN: "Forbidden",
-    NOT_ALLOWED: "Method Not Allowed",
+    OK: HTTPStatus.OK.phrase,
+    FORBIDDEN: HTTPStatus.FORBIDDEN.phrase,
+    NOT_FOUND: HTTPStatus.NOT_FOUND.phrase,
+    NOT_ALLOWED: HTTPStatus.METHOD_NOT_ALLOWED.phrase,
 }
 
 
@@ -62,7 +63,8 @@ class RequestHandler:
             if not val:
                 break
             buffer += val.decode(self._encoding)
-            if val.endswith(self._head_delimiter.encode(self._encoding)):
+            # delimiter can be read only partially
+            if buffer.find(self._head_delimiter) >= 0:
                 break
         return buffer
 
@@ -154,29 +156,32 @@ class WebServer:
         self._socket.close()
 
     def serve_forever(
-        self, request_handler: RequestHandler, document_root: str
+        self, request_handler: RequestHandler, document_root: str, threads: int
     ) -> None:
         while True:
             try:
                 client_socket, address = self._socket.accept()
-                thread = threading.Thread(
-                    target=request_handler,
-                    args=(client_socket, address, document_root),
-                    daemon=True,
-                )
-                thread.start()
+                with ThreadPoolExecutor(max_workers=threads) as ex:
+                    futures = [
+                        ex.submit(
+                            request_handler, client_socket, address, document_root
+                        )
+                    ]
+                    for f in as_completed(futures):
+                        f.result()
             except socket.error as e:
                 logging.info(f"Unable to accept socket connection: {e}")
                 self.close()
 
 
-def main(host: str, port: int, workers: int, document_root: str) -> None:
+def main(host: str, port: int, workers: int, threads: int, document_root: str) -> None:
     processes = []
     try:
         for _ in range(workers):
             server = WebServer(host, port)
             process = multiprocessing.Process(
-                target=server.serve_forever, args=(RequestHandler, document_root)
+                target=server.serve_forever,
+                args=(RequestHandler, document_root, threads),
             )
             processes.append(process)
             process.start()
@@ -194,6 +199,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--host", type=str, default="localhost")
     parser.add_argument("-p", "--port", type=int, default=8080)
     parser.add_argument("-w", "--workers", type=int, default=5)
+    parser.add_argument("-t", "--threads", type=int, default=10)
     parser.add_argument("-r", "--document-root", default=".", help="document root")
     parser.add_argument("-l", "--log", action="store", default=None)
     args = parser.parse_args()
@@ -203,4 +209,4 @@ if __name__ == "__main__":
         format="[%(asctime)s] %(levelname).1s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    main(args.host, args.port, args.workers, args.document_root)
+    main(args.host, args.port, args.workers, args.threads, args.document_root)
