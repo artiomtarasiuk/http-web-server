@@ -202,6 +202,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--threads", type=int, default=10)
     parser.add_argument("-r", "--document-root", default=".", help="document root")
     parser.add_argument("-l", "--log", action="store", default=None)
+    print(5)
     args = parser.parse_args()
     logging.basicConfig(
         filename=args.log,
