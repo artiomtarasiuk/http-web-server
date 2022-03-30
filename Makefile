@@ -2,6 +2,7 @@
 .ONESHELL:
 
 check_dirs := .
+check_dirs := .
 
 format:
 	black $(check_dirs)
